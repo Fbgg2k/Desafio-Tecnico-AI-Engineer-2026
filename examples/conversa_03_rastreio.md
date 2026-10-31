@@ -6,8 +6,8 @@
 
 **Cliente:** Obrigado! É o pedido 19.
 
-**Atendente:** Segundo nossos registros, o pedido 19 está **cancelado** por pagamento não confirmado. O cliente foi notificado.
+**Atendente:** Encontrei o pedido 19: ele está **cancelado**. A observação no sistema informa que o pagamento por boleto não foi confirmado dentro do prazo.
 
 **Cliente:** Ah, tinha sido feito no boleto mesmo. Vou refazer o pagamento. E o pedido 5?
 
-**Atendente:** O pedido 5 está **delivered** (entregue) — pagamento via Pix, com estimativa de entrega cumprida.
+**Atendente:** O pedido 5 está **entregue**. O registro mostra pagamento via Pix e código de rastreamento `BRTP3456789BR`; a previsão registrada era 18/01/2026.

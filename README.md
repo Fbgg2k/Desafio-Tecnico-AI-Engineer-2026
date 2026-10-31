@@ -2,17 +2,22 @@
 
 Agente de atendimento em Python para a loja fictícia Empório da Música, em Campo Grande/MS. Combina consultas aos CSVs operacionais com busca RAG no manual de políticas em PDF.
 
-## Arquitetura
+## Arquitetura e escolhas técnicas
 
-- **Agente:** LangGraph ReAct com Gemini (`gemini-2.5-flash`).
-- **Dados operacionais:** ferramentas pandas para catálogo, estoque, categorias e pedidos.
-- **Políticas:** FAISS e sentence-transformers para recuperar trechos do PDF.
-- **Memória:** checkpoints SQLite persistentes por `thread_id`; logs legíveis em `conversations/runtime/`.
-- **Interfaces:** CLI e Streamlit.
-- **Guardrails:** padrões conhecidos de prompt injection e pedidos claramente fora do escopo são recusados antes de chamar o modelo. O system prompt também restringe o atendimento à loja.
-- **Exceções de catálogo:** disponibilidade distingue ID não encontrado, produto descontinuado, lançamento futuro, item sem estoque e item disponível. Pedidos de acessórios são direcionados a lojas parceiras.
+| Componente | Escolha | Motivo |
+|---|---|---|
+| Orquestração | LangGraph ReAct | Permite ao modelo selecionar ferramentas conforme a solicitação. |
+| LLM | Gemini `gemini-2.5-flash` | Function calling para encaminhar perguntas às ferramentas do domínio. |
+| Dados operacionais | pandas sobre CSV | Acessa diretamente os arquivos fornecidos sem exigir um banco separado. |
+| Busca de políticas | FAISS + sentence-transformers | Recuperação vetorial local dos trechos do PDF. |
+| Memória | SQLite por `thread_id` | Checkpoints persistentes entre reinicializações e isolamento lógico de conversas. |
+| Interface | CLI e Streamlit | Permite testar pelo terminal ou por chat web. |
 
-Os guardrails por padrões não detectam todas as formas possíveis de conteúdo fora de escopo ou de prompt injection; não são uma garantia de segurança completa.
+O fluxo ReAct decide quando consultar o catálogo, os pedidos ou o manual; o agente deve responder com base nos resultados das ferramentas.
+
+**Exceções de catálogo:** disponibilidade distingue ID não encontrado, produto descontinuado, lançamento futuro, item sem estoque e item disponível. Pedidos de acessórios são direcionados a lojas parceiras.
+
+**Limite dos guardrails:** padrões conhecidos de prompt injection e assuntos claramente fora do escopo são recusados antes da chamada ao modelo. Os filtros não detectam todas as variações e não constituem garantia completa de segurança; o system prompt também restringe o atendimento à loja.
 
 ## Requisitos
 
