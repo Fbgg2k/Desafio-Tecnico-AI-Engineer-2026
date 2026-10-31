@@ -1,4 +1,11 @@
-"""Ponto de entrada da aplicação do agente (interface CLI estilo chat)."""
+"""Ponto de entrada da aplicação do agente (CLI ou interface Streamlit)."""
+
+import sys
+from pathlib import Path
+
+_PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
 
 from langchain_core.messages import HumanMessage
 
@@ -6,19 +13,52 @@ from dotenv import load_dotenv
 
 from src.agent.memory import _text_content, get_agent, save_conversation
 
+load_dotenv()
 
-def run_agent(question: str, thread_id: str = "conversa-001") -> str:
+import streamlit as st
+from streamlit.runtime.scriptrunner import get_script_run_ctx
+
+_DEFAULT_THREAD_ID = "conversa-streamlit"
+
+
+def _run_agent(thread_id: str, question: str):
     """Roda o agente com memória da thread e persiste a conversa."""
     agent, config = get_agent(thread_id)
     result = agent.invoke({"messages": [HumanMessage(content=question)]}, config=config)
     messages = result.get("messages") or []
     last = messages[-1] if messages else None
-    content = _text_content(getattr(last, "content", "") or "")
+    answer = _text_content(getattr(last, "content", "") or "")
     save_conversation(thread_id, messages)
-    return content
+    return answer, messages
+
+
+def run_streamlit() -> None:
+    """Interface web (Streamlit) estilo chat do agente."""
+    st.set_page_config(page_title="Empório da Música", page_icon="🎸")
+    st.title("🎸 Empório da Música — Agente de Atendimento")
+    st.caption("Atendente virtual especializado em instrumentos musicais.")
+
+    if "thread_id" not in st.session_state:
+        st.session_state.thread_id = _DEFAULT_THREAD_ID
+    thread_id = st.session_state.thread_id
+    agent, config = get_agent(thread_id)
+
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+
+    for msg in st.session_state.messages:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
+
+    prompt = st.chat_input("Como posso te ajudar hoje?")
+    if prompt:
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        answer, _messages = _run_agent(thread_id, prompt)
+        st.session_state.messages.append({"role": "assistant", "content": answer})
 
 
 def main() -> None:
+    """Interface CLI (estilo chat) do agente."""
     thread_id = "conversa-001"
     agent, config = get_agent(thread_id)
     print(f"Agente Empório da Música pronto. Conversa: {thread_id} (Ctrl+C para sair).")
@@ -35,6 +75,13 @@ def main() -> None:
         answer = _text_content(getattr(last, "content", "") or "")
         save_conversation(thread_id, messages)
         print(f"Atendente: {answer}")
+
+
+_script_run_ctx = get_script_run_ctx()
+if _script_run_ctx is not None:
+    run_streamlit()
+else:
+    main()
 
 
 if __name__ == "__main__":
