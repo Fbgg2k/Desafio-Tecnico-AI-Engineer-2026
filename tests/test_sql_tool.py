@@ -17,7 +17,24 @@ def test_get_product_by_id():
 
 def test_check_stock():
     assert sql_tool.check_stock(81) is True
+    assert sql_tool.check_stock(113) is False
     assert sql_tool.check_stock(99999) is False
+
+
+def test_get_product_availability_distinguishes_exception_paths():
+    cases = {
+        81: "available",
+        96: "out_of_stock",
+        113: "discontinued",
+        130: "coming_soon",
+        99999: "not_found",
+    }
+
+    for product_id, expected_availability in cases.items():
+        result = sql_tool.get_product_availability(product_id)
+        assert result["availability"] == expected_availability
+        assert result["available"] is (expected_availability == "available")
+        assert result["message"]
 
 
 def test_search_products():

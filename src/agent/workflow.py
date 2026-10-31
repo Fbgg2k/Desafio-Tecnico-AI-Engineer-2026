@@ -17,10 +17,10 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from src.agent.prompts import SYSTEM_PROMPT
 from src.agent.tools.rag_tool import retrieve_policy
 from src.agent.tools.sql_tool import (
-    check_stock,
     get_customer_orders,
     get_order_status,
     get_product,
+    get_product_availability,
     list_categories,
     search_products,
 )
@@ -70,9 +70,13 @@ def build_tools() -> List[BaseTool]:
             description="Retorna os dados completos de um produto (preço, estoque, status).",
         ),
         StructuredTool.from_function(
-            func=check_stock,
+            func=get_product_availability,
             name="check_stock",
-            description="Verifica se um produto está em estoque (disponível para venda).",
+            description=(
+                "Verifica a disponibilidade pelo ID do produto e distingue: disponível, "
+                "sem estoque, descontinuado, lançamento futuro ou ID não encontrado. "
+                "Use o status e a mensagem retornados sem inferir disponibilidade apenas pela quantidade."
+            ),
         ),
         StructuredTool.from_function(
             func=get_order_status,

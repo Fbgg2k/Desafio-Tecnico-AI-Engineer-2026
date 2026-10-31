@@ -21,6 +21,14 @@ _INJECTION_PATTERNS = (
     ),
 )
 
+_ACCESSORY_REQUEST_PATTERN = re.compile(
+    r"\b(?:vende(?:m)?|comercializa(?:m)?|tem|t[eê]m|procuro|"
+    r"quero comprar|preciso de|gostaria de comprar)\b.{0,50}"
+    r"\b(?:cordas?|cabos?|palhetas?|pedais?|capotrastes?|afinadores?|"
+    r"correias?|baquetas?|encordoamentos?)\b",
+    re.IGNORECASE | re.DOTALL,
+)
+
 _OUT_OF_SCOPE_PATTERNS = (
     re.compile(
         r"\b(?:escreva|escrever|crie|criar|implemente|desenvolva|debugue|depure)\b"
@@ -43,6 +51,10 @@ _SCOPE_REFUSAL = (
     "Posso ajudar com instrumentos musicais, pedidos e políticas da Empório da Música. "
     "Esse assunto está fora do atendimento da loja."
 )
+_ACCESSORY_REFUSAL = (
+    "A Empório da Música comercializa apenas instrumentos musicais. "
+    "Para acessórios como esse, posso indicar que procure uma de nossas lojas parceiras."
+)
 
 
 def guardrail_response(message: str) -> str | None:
@@ -50,6 +62,9 @@ def guardrail_response(message: str) -> str | None:
     for pattern in _INJECTION_PATTERNS:
         if pattern.search(message):
             return _INJECTION_REFUSAL
+
+    if _ACCESSORY_REQUEST_PATTERN.search(message):
+        return _ACCESSORY_REFUSAL
 
     for pattern in _OUT_OF_SCOPE_PATTERNS:
         if pattern.search(message):

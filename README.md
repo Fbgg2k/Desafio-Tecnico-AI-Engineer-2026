@@ -10,6 +10,7 @@ Agente de atendimento em Python para a loja fictícia Empório da Música, em Ca
 - **Memória:** checkpoints SQLite persistentes por `thread_id`; logs legíveis em `conversations/runtime/`.
 - **Interfaces:** CLI e Streamlit.
 - **Guardrails:** padrões conhecidos de prompt injection e pedidos claramente fora do escopo são recusados antes de chamar o modelo. O system prompt também restringe o atendimento à loja.
+- **Exceções de catálogo:** disponibilidade distingue ID não encontrado, produto descontinuado, lançamento futuro, item sem estoque e item disponível. Pedidos de acessórios são direcionados a lojas parceiras.
 
 Os guardrails por padrões não detectam todas as formas possíveis de conteúdo fora de escopo ou de prompt injection; não são uma garantia de segurança completa.
 

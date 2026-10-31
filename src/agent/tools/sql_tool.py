@@ -66,11 +66,49 @@ def get_customer_orders(customer_id: int, limit: int = 10) -> List[Dict[str, Any
 
 def check_stock(product_id: int) -> bool:
     """Verifica se um produto está em estoque (disponível para venda)."""
-    products = _load_tables()["products"]
-    row = products[products["product_id"] == int(product_id)]
-    if row.empty:
-        return False
-    return bool(row.iloc[0]["stock_quantity"] > 0)
+    return bool(get_product_availability(product_id)["available"])
+
+
+def get_product_availability(product_id: int) -> Dict[str, Any]:
+    """Retorna disponibilidade distinguindo produto ausente, inativo e sem estoque."""
+    product = get_product(product_id)
+    if product is None:
+        return {
+            "product_id": int(product_id),
+            "availability": "not_found",
+            "available": False,
+            "message": f"Produto de ID {product_id} não encontrado no catálogo.",
+        }
+
+    name = str(product["name"])
+    status = str(product["status"]).strip().lower()
+    quantity = int(product["stock_quantity"])
+
+    if status == "discontinued":
+        availability = "discontinued"
+        message = f"{name} está descontinuado e não está disponível para venda."
+    elif status == "coming_soon":
+        availability = "coming_soon"
+        message = f"{name} ainda não está disponível para venda."
+    elif status != "active":
+        availability = "inactive"
+        message = f"{name} está com status '{status}' e não está disponível para venda."
+    elif quantity <= 0:
+        availability = "out_of_stock"
+        message = f"{name} está ativo no catálogo, mas sem estoque no momento."
+    else:
+        availability = "available"
+        message = f"{name} está disponível; estoque atual: {quantity} unidade(s)."
+
+    return {
+        "product_id": int(product_id),
+        "name": name,
+        "availability": availability,
+        "available": availability == "available",
+        "status": status,
+        "stock_quantity": quantity,
+        "message": message,
+    }
 
 
 def list_categories() -> List[Dict[str, Any]]:

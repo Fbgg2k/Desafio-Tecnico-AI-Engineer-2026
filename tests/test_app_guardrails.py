@@ -36,3 +36,14 @@ def test_prompt_injection_is_refused_without_invoking_model(monkeypatch):
     assert isinstance(messages[0], HumanMessage)
     assert isinstance(messages[1], AIMessage)
     assert agent.invoked is False
+
+
+def test_accessory_request_is_redirected_without_invoking_model(monkeypatch):
+    agent = FakeAgent()
+    monkeypatch.setattr(app, "get_agent", lambda _thread_id: (agent, {}))
+    monkeypatch.setattr(app, "save_conversation", lambda *_args: None)
+
+    answer, _messages = app._run_agent("test-thread", "Vocês vendem palhetas?")
+
+    assert "lojas parceiras" in answer
+    assert agent.invoked is False

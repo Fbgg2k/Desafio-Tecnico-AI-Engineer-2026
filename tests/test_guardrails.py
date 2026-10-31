@@ -34,6 +34,20 @@ def test_guardrail_redirects_clear_off_topic_requests(message):
 @pytest.mark.parametrize(
     "message",
     [
+        "Vocês vendem palhetas?",
+        "Quero comprar cordas para guitarra.",
+        "Vocês têm cabos disponíveis?",
+    ],
+)
+def test_guardrail_redirects_accessory_requests_to_partner_stores(message):
+    response = guardrail_response(message)
+    assert response is not None
+    assert "lojas parceiras" in response
+
+
+@pytest.mark.parametrize(
+    "message",
+    [
         "Vocês têm violão Yamaha em estoque?",
         "Como funciona a garantia do teclado?",
         "Qual é a política de troca da loja?",

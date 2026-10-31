@@ -98,7 +98,7 @@ As cinco relações de chave estrangeira foram conferidas contra os CSVs: não h
 ### 📍 Checkin 3: Orquestração do Agente & Histórico de Conversa
 - [x] Conexão das ferramentas ao Grafo do Agente (`LangGraph`/`ReAct`).
 - [x] Implementação da memória persistente em SQLite para manter o histórico das conversas por thread.
-- [ ] Adição de tratamentos para percursos de exceção (perguntas fora do escopo, produtos indisponíveis ou descontinuados).
+- [x] Adição de tratamentos para perguntas fora do escopo e pedidos de acessórios, além de respostas distintas para produtos não encontrados, sem estoque, descontinuados ou em lançamento futuro.
 
 ### 📍 Checkin 4: Interface & Entregáveis de Avaliação
 - [x] Desenvolvimento da interface de chat (`Streamlit` ou script CLI interativo).
