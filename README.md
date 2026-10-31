@@ -53,7 +53,15 @@ Cada sessão Streamlit recebe um identificador de conversa próprio. A CLI usa `
 pytest -q
 ```
 
-Os testes cobrem ingestão, recuperação RAG, ferramentas de dados, guardrails e persistência de checkpoints SQLite. Eles não fazem chamadas reais à API do Gemini.
+Os testes offline cobrem ingestão, recuperação RAG, ferramentas de dados, guardrails, persistência SQLite e schemas/execução das ferramentas no grafo. Não fazem chamadas reais ao Gemini.
+
+Para validar a seleção das ferramentas pelo Gemini, configure `GOOGLE_API_KEY` no `.env` e execute, conscientemente, o teste de integração:
+
+```bash
+RUN_GEMINI_INTEGRATION_TESTS=1 pytest -q tests/integration/test_gemini_tool_routing.py
+```
+
+Esse teste faz chamadas reais à API do Gemini e pode gerar cobrança. Sem a variável de ativação e a chave configurada, os casos de integração são ignorados.
 
 ## Estrutura
 

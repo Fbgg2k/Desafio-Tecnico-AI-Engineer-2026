@@ -92,7 +92,8 @@ As cinco relações de chave estrangeira foram conferidas contra os CSVs: não h
 - [x] Implementação da ferramenta de consulta SQL/Dataframe (`sql_tool.py`) para buscas de estoque, preços e status de pedidos.
 - [x] Implementação da ferramenta de RAG (`rag_tool.py`) para consulta ao manual de políticas.
 - [x] Construção do prompt do sistema (`prompts.py`) fixando a persona "Empório da Música" (Campo Grande/MS, recusa de acessórios, tom amigável).
-- [ ] Testes de validação de chamada de funções (garantir que a LLM chama a tool certa para cada pergunta).
+- [x] Testes offline de schemas e execução de cada ferramenta pelo grafo com modelo simulado (`tests/test_tool_routing.py`).
+- [ ] Validar com chamadas reais ao Gemini a seleção da ferramenta adequada para cada pergunta (`tests/integration/test_gemini_tool_routing.py`).
 
 ### 📍 Checkin 3: Orquestração do Agente & Histórico de Conversa
 - [x] Conexão das ferramentas ao Grafo do Agente (`LangGraph`/`ReAct`).
