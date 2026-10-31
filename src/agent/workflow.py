@@ -4,6 +4,7 @@ import os
 from typing import List, Optional
 
 from langchain_core.tools import BaseTool, Tool
+from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import create_react_agent
 from langchain_google_genai import ChatGoogleGenerativeAI
 
@@ -73,11 +74,28 @@ def _get_llm(model: str = DEFAULT_MODEL):
     )
 
 
-def create_agent_executor(tools: Optional[List[BaseTool]] = None, model: str = DEFAULT_MODEL):
+def create_agent_executor(
+    tools: Optional[List[BaseTool]] = None,
+    model: str = DEFAULT_MODEL,
+    checkpointer: Optional = None,
+):
     """Cria o executor ReAct do agente."""
     agent = create_react_agent(
         model=_get_llm(model),
         tools=tools or build_tools(),
         prompt=SYSTEM_PROMPT,
+        checkpointer=checkpointer or MemorySaver(),
     )
     return agent
+
+
+def create_agent_for_thread(thread_id: str, tools: Optional[List[BaseTool]] = None, model: str = DEFAULT_MODEL):
+    """Cria o executor ReAct vinculado a uma thread (memória de conversa)."""
+    agent = create_react_agent(
+        model=_get_llm(model),
+        tools=tools or build_tools(),
+        prompt=SYSTEM_PROMPT,
+        checkpointer=MemorySaver(),
+    )
+    config = {"configurable": {"thread_id": thread_id}}
+    return agent, config
