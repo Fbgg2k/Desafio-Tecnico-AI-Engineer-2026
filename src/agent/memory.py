@@ -1,5 +1,6 @@
-"""Gerenciamento da memória de conversas do agente (persistência em markdown)."""
+"""Gerenciamento da memória de conversas e dos logs em Markdown."""
 
+import re
 from pathlib import Path
 from typing import List
 
@@ -8,9 +9,15 @@ from langchain_core.messages import BaseMessage, HumanMessage
 from src.agent.workflow import create_agent_for_thread
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-CONVERSATIONS_DIR = PROJECT_ROOT / "conversations"
+CONVERSATIONS_DIR = PROJECT_ROOT / "conversations" / "runtime"
 
 _agents = {}
+_THREAD_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]+$")
+
+
+def _validate_thread_id(thread_id: str) -> None:
+    if not _THREAD_ID_PATTERN.fullmatch(thread_id):
+        raise ValueError("O ID da conversa só pode conter letras, números, hífen e sublinhado.")
 
 
 def _text_content(content) -> str:
@@ -29,6 +36,7 @@ def _text_content(content) -> str:
 
 def get_agent(thread_id: str = "conversa-001"):
     """Retorna (executor, config) do executor ReAct vinculado a uma thread (memória)."""
+    _validate_thread_id(thread_id)
     if thread_id not in _agents:
         _agents[thread_id] = create_agent_for_thread(thread_id)
     return _agents[thread_id]
@@ -70,6 +78,7 @@ def format_conversation(messages: List[BaseMessage]) -> str:
 
 def save_conversation(thread_id: str, messages: List[BaseMessage], directory: Path = CONVERSATIONS_DIR) -> Path:
     """Salva a conversa (thread) em um arquivo markdown dentro de conversations/."""
+    _validate_thread_id(thread_id)
     directory.mkdir(parents=True, exist_ok=True)
     path = directory / f"{thread_id}.md"
     path.write_text(f"# Conversa {thread_id}\n\n{format_conversation(messages)}", encoding="utf-8")

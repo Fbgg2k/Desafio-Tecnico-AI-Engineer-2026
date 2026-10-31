@@ -1,16 +1,18 @@
 """Ponto de entrada da aplicação do agente (CLI ou interface Streamlit)."""
 
 import sys
+import uuid
 from pathlib import Path
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage
 
 from dotenv import load_dotenv
 
+from src.agent.guardrails import guardrail_response
 from src.agent.memory import _text_content, get_agent, save_conversation
 
 load_dotenv()
@@ -18,16 +20,23 @@ load_dotenv()
 import streamlit as st
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 
-_DEFAULT_THREAD_ID = "conversa-streamlit"
-
 
 def _run_agent(thread_id: str, question: str):
     """Roda o agente com memória da thread e persiste a conversa."""
     agent, config = get_agent(thread_id)
-    result = agent.invoke({"messages": [HumanMessage(content=question)]}, config=config)
-    messages = result.get("messages") or []
-    last = messages[-1] if messages else None
-    answer = _text_content(getattr(last, "content", "") or "")
+    refusal = guardrail_response(question)
+    if refusal:
+        agent.update_state(
+            config,
+            {"messages": [HumanMessage(content=question), AIMessage(content=refusal)]},
+        )
+        messages = agent.get_state(config).values.get("messages") or []
+        answer = refusal
+    else:
+        result = agent.invoke({"messages": [HumanMessage(content=question)]}, config=config)
+        messages = result.get("messages") or []
+        last = messages[-1] if messages else None
+        answer = _text_content(getattr(last, "content", "") or "")
     save_conversation(thread_id, messages)
     return answer, messages
 
@@ -39,9 +48,8 @@ def run_streamlit() -> None:
     st.caption("Atendente virtual especializado em instrumentos musicais.")
 
     if "thread_id" not in st.session_state:
-        st.session_state.thread_id = _DEFAULT_THREAD_ID
+        st.session_state.thread_id = uuid.uuid4().hex
     thread_id = st.session_state.thread_id
-    agent, config = get_agent(thread_id)
 
     if "messages" not in st.session_state:
         st.session_state.messages = []
@@ -60,7 +68,6 @@ def run_streamlit() -> None:
 def main() -> None:
     """Interface CLI (estilo chat) do agente."""
     thread_id = "conversa-001"
-    agent, config = get_agent(thread_id)
     print(f"Agente Empório da Música pronto. Conversa: {thread_id} (Ctrl+C para sair).")
     while True:
         try:
@@ -69,20 +76,12 @@ def main() -> None:
             break
         if not question.strip():
             continue
-        result = agent.invoke({"messages": [HumanMessage(content=question)]}, config=config)
-        messages = result.get("messages") or []
-        last = messages[-1] if messages else None
-        answer = _text_content(getattr(last, "content", "") or "")
-        save_conversation(thread_id, messages)
+        answer, _messages = _run_agent(thread_id, question)
         print(f"Atendente: {answer}")
 
 
-_script_run_ctx = get_script_run_ctx()
-if _script_run_ctx is not None:
-    run_streamlit()
-else:
-    main()
-
-
 if __name__ == "__main__":
-    main()
+    if get_script_run_ctx() is not None:
+        run_streamlit()
+    else:
+        main()

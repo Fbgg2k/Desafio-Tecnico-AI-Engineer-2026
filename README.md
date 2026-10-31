@@ -1,224 +1,73 @@
-# Desafio Técnico AI Engineer 2026 — Agente de Atendimento: Empório da Música
+# Agente de Atendimento — Empório da Música
 
-## 📌 Sobre o Projeto
+Agente de atendimento em Python para a loja fictícia Empório da Música, em Campo Grande/MS. Combina consultas aos CSVs operacionais com busca RAG no manual de políticas em PDF.
 
-Construção de um **agente inteligente de atendimento em Python** para a loja fictícia **Empório da Música** (Campo Grande/MS).
+## Arquitetura
 
-O agente simula um **especialista em atendimento via WhatsApp**, unindo:
+- **Agente:** LangGraph ReAct com Gemini (`gemini-2.5-flash`).
+- **Dados operacionais:** ferramentas pandas para catálogo, estoque, categorias e pedidos.
+- **Políticas:** FAISS e sentence-transformers para recuperar trechos do PDF.
+- **Memória:** checkpoints SQLite persistentes por `thread_id`; logs legíveis em `conversations/runtime/`.
+- **Interfaces:** CLI e Streamlit.
+- **Guardrails:** padrões conhecidos de prompt injection e pedidos claramente fora do escopo são recusados antes de chamar o modelo. O system prompt também restringe o atendimento à loja.
 
-- **Consultas de dados operacionais** (produtos, pedidos, clientes, promoções) em arquivos **CSV**;
-- **Políticas internas e procedimentos** (troca, garantia, prazos, pagamento, frete) em **PDF**.
+Os guardrails por padrões não detectam todas as formas possíveis de conteúdo fora de escopo ou de prompt injection; não são uma garantia de segurança completa.
 
-## 🏗️ Arquitetura
+## Requisitos
 
-Arquitetura híbrida (**ReAct + Router/Tools**):
+- Python 3.10 ou superior.
+- Uma chave de API do Google AI Studio para executar o agente com Gemini.
 
-1. **RAG** — recuperacão aumentada por geração sobre o manual interno (`data/políticas_da_loja.pdf`): chunking → embeddings → busca vetorial (FAISS) → retriever.
-2. **Function Calling / Text-to-SQL** — consultas analíticas/operacionais sobre os CSVs (`src/agent/tools/sql_tool.py`).
-3. **Guardrails** — recusa amigável para fora de escopo e *prompt injection*.
-
-Fluxo do agente: recebe a pergunta → decide entre RAG e tools (via LangGraph ReAct) → responde com base nos fatos recuperados.
-
-## 🛠️ Stack Tecnológica
-
-| Camada / Função | Tecnologias | Justificativa |
-|---|---|---|
-| Linguagem | Python 3.10+ | Requisito do desafio |
-| Framework de agentes | LangGraph / LangChain | Orquestração ReAct, estado, tools |
-| LLM | OpenAI (`gpt-4o-mini`) | Custo/velocidade/precisão para function calling |
-| Busca SQL/CSV | pandas | Consultas analíticas sobre CSVs |
-| Vetorização & RAG | FAISS + sentence-transformers | Busca local, fácil execução |
-| Interface | CLI (Streamlit no roadmap | Chat rápido para testes |
-
-## 📁 Estrutura do Repositório
-
-```text
-Desafio-Tecnico-AI-Engineer-2026/
-├── data/                     # CSVs operacionais + politicas_da_loja.pdf
-├── src/
-│   ├── agent/
-│   │   ├── prompts.py        # System prompt e persona
-│   │   ├── workflow.py       # Grafo / executor ReAct (LangGraph)
-│   │   └── tools/
-│   │       ├── sql_tool.py   # Consulta de dados (produtos, pedidos, estoque)
-│   │       └── rag_tool.py   # Busca vetorial no PDF de políticas
-│   ├── database/
-│   │   ├── ingestion.py      # Leitura de PDF + Markdown
-│   │   └── rag_store.py      # Chunking + embeddings + FAISS
-│   └── app.py                # Ponto de entrada (CLI chat)
-├── conversations/            # Memória de conversas (logs .md por thread)
-├── tests/                    # Testes de ingestão, tools e RAG
-├── examples/                 # Conversas de exemplo (Entregável 3)
-├── README.md
-├── requirements.txt
-└── .env.example              # GOOGLE_API_KEY
-```
-
-## 🚀 Instalação e Execução (Linux)
+## Instalação
 
 ```bash
-# 1. Clone o repositório
 git clone https://github.com/Fbgg2k/Desafio-Tecnico-AI-Engineer-2026.git
 cd Desafio-Tecnico-AI-Engineer-2026
-
-# 2. Ambiente virtual
 python3 -m venv .venv
 source .venv/bin/activate
-
-# 3. Dependências
 pip install -r requirements.txt
-
-# 4. Chave da OpenAI (obrigatória)
 cp .env.example .env
-# edite .env e coloque sua OPENAI_API_KEY
+```
 
-# 5. Testes
-python -m pytest tests/ -v
+Edite `.env` e configure `GOOGLE_API_KEY` com sua chave do Google AI Studio. Não compartilhe nem versione esse arquivo.
 
-# 6. Execução do agente (CLI)
+## Executar
+
+CLI:
+
+```bash
 python src/app.py
 ```
 
-## 🧪 Testes
+Interface web:
 
 ```bash
-python -m pytest tests/ -v
+streamlit run src/app.py
 ```
 
-Cobre: ingestão de documentos (PDF/Markdown), ferramentas de dados e retriever RAG.
+Cada sessão Streamlit recebe um identificador de conversa próprio. A CLI usa `conversa-001` para retomar o mesmo histórico entre execuções.
 
-## 📚 Exemplos
+## Testes
 
-- `examples/conversa_01_catalogo.md` — recomendação e catálogo.
-- `examples/conversa_02_politicas.md` — trocas, garantia, prazos, pagamento, frete.
-- `examples/conversa_03_rastreio.md` — rastreamento de pedidos.
-
-## 🤖 Uso de IA
-
-Este projeto foi desenvolvido com apoio de ferramentas de IA (assistência de código e geração de documentação).
-
-## ⚠️ Limitações e Evoluções
-
-- LLM com custo por token; estratégias de caching/contexto.
-- Embeddings OpenAI no lugar de locais.
-- Interface Streamlit no lugar da CLI.
-- Persistência de memória de conversa.
-
-## ✅ Entregáveis
-
-- [x] Check-in 1 — Ambiente, dados e ingestão.
-- [ ] Check-in 2 — Tools e system prompt.
-- [ ] Check-in 3 — Orquestração e memória.
-- [ ] Check-in 4 — Interface, exemplos, README final.
+```bash
+pytest -q
 ```
 
-Hmm, I marked check-ins inconsistently. Let me make it coherent.
+Os testes cobrem ingestão, recuperação RAG, ferramentas de dados, guardrails e persistência de checkpoints SQLite. Eles não fazem chamadas reais à API do Gemini.
 
-Let me rewrite the README more carefully and completely. Actually, let me just write it well in one go.
-
-Also, I should keep the README not overly long. Let me finalize.
-
-After README, commit + push, then ask about LLM key.
-
-Let me write the final README.</think>Agora vou finalizar o **README.md** completo:<tool_call>write<arg_key>content</arg_key><arg_value># Desafio Técnico AI Engineer 2026 — Agente de Atendimento: Empório da Música
-
-## 📌 Sobre o Projeto
-
-Construção de um **agente inteligente de atendimento em Python** para a loja fictícia **Empório da Música** (Campo Grande/MS).
-
-O agente simula um **especialista em atendimento via WhatsApp**, unindo:
-
-- **Consultas de dados operacionais** (produtos, pedidos, clientes, promoções) em arquivos **CSV**;
-- **Políticas internas e procedimentos** (troca, garantia, prazos, pagamento, frete) em **PDF**.
-
-## 🏗️ Arquitetura
-
-Arquitetura híbrida (**ReAct + Router/Tools**):
-
-1. **RAG** — recuperação aumentada por geração sobre o manual interno (`data/políticas_da_loja.pdf`): chunking → embeddings → busca vetorial (FAISS) → retriever;
-2. **Function Calling / Text-to-SQL** — consultas analíticas/operacionais sobre os CSVs (`src/agent/tools/sql_tool.py`);
-3. **Guardrails** — recusa amigável para fora de escopo e *prompt injection*.
-
-Fluxo do agente: a pergunta chega → o executor ReAct (LangGraph) decide entre RAG e tools → monta resposta com os fatos recuperados → **memória por thread (MemorySaver)** mantém o contexto e persiste logs em `conversations/*.md`.
-
-## 🛠️ Stack Tecnológica
-
-| Camada / Função | Tecnologias | Justificativa |
-| :--- | :--- | :--- |
-| **Linguagem** | Python 3.10+ | Requisito obrigatório do desafio |
-| **Framework de Agentes** | LangGraph / LangChain | Orquestração ReAct, estado e tools |
-| **LLM** | Gemini (`gemini-2.5-flash`) via Google AI Studio | Equilíbrio entre custo, velocidade e precisão para *Function Calling* |
-| **Busca SQL/CSV** | pandas | Consultas analíticas sobre CSVs |
-| **Vetorização & RAG** | FAISS + sentence-transformers | Busca local, fácil execução |
-| **Interface** | CLI (Streamlit no roadmap) | Chat rápido para testes |
-
-## 📁 Estrutura do Repositório
+## Estrutura
 
 ```text
-Desafio-Tecnico-AI-Engineer-2026/
-├── data/                        # CSVs operacionais + politicas_da_loja.pdf
-├── src/
-│   ├── agent/
-│   │   ├── prompts.py           # System prompt e persona
-│   │   ├── workflow.py          # Executor ReAct (LangGraph)
-│   │   └── tools/
-│   │       ├── sql_tool.py      # Consulta de dados (produtos, pedidos, estoque)
-│   │       └── rag_tool.py      # Busca vetorial no PDF de políticas
-│   ├── database/
-│   │   ├── ingestion.py         # Leitura de PDF + Markdown
-│   │   └── rag_store.py         # Chunking + embeddings + FAISS
-│   └── app.py                   # Ponto de entrada (CLI chat)
-├── conversations/              # Memória de conversas (logs .md por thread)
-├── tests/                       # Testes de ingestão, tools e RAG
-├── examples/                    # Conversas de exemplo (Entregável 3)
-├── README.md
-├── requirements.txt
-└── .env.example                 # GOOGLE_API_KEY
+src/agent/       Prompt, workflow, memória e guardrails
+src/agent/tools/ Consultas operacionais e recuperação de políticas
+src/database/    Ingestão de documentos e armazenamento RAG
+data/            CSVs operacionais e PDF de políticas
+examples/        Conversas de exemplo
+tests/           Testes automatizados
 ```
 
-## 🚀 Instalação e Execução (Linux)
+O SQLite e os logs gerados em `conversations/runtime/` são locais e ignorados pelo Git. Não armazene dados reais de clientes sem definir controles de acesso, retenção e privacidade apropriados.
 
-```bash
-git clone https://github.com/Fbgg2k/Desafio-Tecnico-AI-Engineer-2026.git
-cd Desafio-Tecnico-AI-Engineer-2026
+## Uso de IA
 
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-
-cp .env.example .env   # colar a GOOGLE_API_KEY (Google AI Studio / Gemini)
-python -m pytest tests/ -v
-python src/app.py
-```
-
-## 🧪 Testes
-
-```bash
-python -m pytest tests/ -v
-```
-
-Cobre ingestão de documentos (PDF/Markdown), ferramentas de dados e retriever RAG.
-
-## 📚 Exemplos
-
-- `examples/conversa_01_catalogo.md` — recomendação e catálogo.
-- `examples/conversa_02_politicas.md` — trocas, garantia, prazos, pagamento, frete.
-- `examples/conversa_03_rastreio.md` — rastreamento de pedidos.
-
-## 🤖 Uso de IA
-
-Este projeto foi desenvolvido com apoio de ferramentas de IA para aceleração de código e documentação.
-
-## ⚠️ Limitações e Evoluções
-
-- LLM com custo por token; estratégias de caching/contexto.
-- Embeddings OpenAI no lugar de locais.
-- Interface Streamlit no lugar da CLI.
-- Memória persistente de conversa.
-
-## ✅ Entregáveis
-
-- [x] Check-in 1 — Ambiente, dados e ingestão.
-- [ ] Check-in 2 — Tools e system prompt.
-- [ ] Check-in 3 — Orquestração e memória.
-- [ ] Check-in 4 — Interface, exemplos, README final.
+O projeto foi desenvolvido com apoio de ferramentas de IA para código e documentação.
