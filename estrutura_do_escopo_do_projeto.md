@@ -108,4 +108,4 @@ As cinco relações de chave estrangeira foram conferidas contra os CSVs: não h
   - Justificativa das escolhas técnicas (LLM, RAG, DuckDB, etc.).
   - Declaração transparente do uso de ferramentas de IA (Cursor/Copilot/Claude).
   - Limitações e melhorias futuras.
-- [ ] Revisão final dos commits e envio do repositório público.
+- [x] Revisão final dos commits e envio do repositório público: https://github.com/Fbgg2k/Desafio-Tecnico-AI-Engineer-2026
