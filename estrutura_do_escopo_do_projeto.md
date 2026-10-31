@@ -70,26 +70,39 @@ emporio-da-musica-agent/
 ## 5. Cronograma de Execução e Checkins
 
 ### 📍 Checkin 1: Estruturação & Modelagem dos Dados
-- [ ] Configuração do ambiente de desenvolvimento Python e controle de versão Git.
-- [ ] Análise dos 6 arquivos CSV e mapeamento do esquema relacional (Primary Keys e Foreign Keys).
-- [ ] Leitura e indexação do PDF `politicas_da_loja.pdf` no Vector DB (ChromaDB/FAISS) usando chunking de parágrafos/seções.
-- [ ] Teste isolado do retriever RAG para confirmar respostas precisas sobre garantia, prazos e políticas.
+- [x] Configuração do ambiente de desenvolvimento Python e controle de versão Git.
+- [x] Análise dos 6 arquivos CSV e mapeamento do esquema relacional (Primary Keys e Foreign Keys).
+- [x] Leitura e indexação do PDF `politicas_da_loja.pdf` no Vector DB (ChromaDB/FAISS) usando chunking de parágrafos/seções.
+- [x] Teste isolado do retriever RAG para confirmar respostas precisas sobre garantia, prazos e políticas.
+
+#### Modelo relacional dos CSVs
+
+| Tabela | Chave primária | Chaves estrangeiras | Cardinalidade / observações |
+|---|---|---|---|
+| `categories` | `category_id` | — | Uma categoria pode ter vários produtos; 6 das 9 categorias aparecem em `products`. |
+| `customers` | `customer_id` | — | Um cliente pode ter vários pedidos; 18 dos 50 clientes aparecem em `orders`. |
+| `products` | `product_id` | `category_id` → `categories.category_id` | Cada produto referencia uma categoria; há 65 produtos. |
+| `orders` | `order_id` | `customer_id` → `customers.customer_id` | Cada pedido referencia um cliente; um cliente pode ter vários pedidos. |
+| `order_items` | (`order_id`, `product_id`) | `order_id` → `orders.order_id`; `product_id` → `products.product_id` | Tabela associativa entre pedidos e produtos; `quantity` registra a quantidade. O par é único nas 22 linhas fornecidas. |
+| `promotions` | `promotion_id` | `product_id` → `products.product_id` | Um produto pode aparecer em várias promoções; 22 produtos aparecem nas 25 linhas. |
+
+As cinco relações de chave estrangeira foram conferidas contra os CSVs: não há valores nulos nem referências órfãs nessas colunas. As chaves primárias simples são únicas e não nulas. A chave composta de `order_items` é única neste conjunto de dados; se o modelo passar a permitir várias linhas do mesmo produto no mesmo pedido, será necessário adicionar um identificador próprio para o item.
 
 ### 📍 Checkin 2: Desenvolvimento de Ferramentas (Tools) & System Prompt
-- [ ] Implementação da ferramenta de consulta SQL/Dataframe (`sql_tool.py`) para buscas de estoque, preços e status de pedidos.
-- [ ] Implementação da ferramenta de RAG (`rag_tool.py`) para consulta ao manual de políticas.
-- [ ] Construção do `system_prompt.py` fixando a persona "Empório da Música" (Campo Grande/MS, recusa de acessórios, tom amigável).
+- [x] Implementação da ferramenta de consulta SQL/Dataframe (`sql_tool.py`) para buscas de estoque, preços e status de pedidos.
+- [x] Implementação da ferramenta de RAG (`rag_tool.py`) para consulta ao manual de políticas.
+- [x] Construção do prompt do sistema (`prompts.py`) fixando a persona "Empório da Música" (Campo Grande/MS, recusa de acessórios, tom amigável).
 - [ ] Testes de validação de chamada de funções (garantir que a LLM chama a tool certa para cada pergunta).
 
 ### 📍 Checkin 3: Orquestração do Agente & Histórico de Conversa
-- [ ] Conexão das ferramentas ao Grafo do Agente (`LangGraph`/`ReAct`).
-- [ ] Implementação da memória persistente (Memory Saver) para manter o histórico das conversas na sessão.
+- [x] Conexão das ferramentas ao Grafo do Agente (`LangGraph`/`ReAct`).
+- [x] Implementação da memória persistente em SQLite para manter o histórico das conversas por thread.
 - [ ] Adição de tratamentos para percursos de exceção (perguntas fora do escopo, produtos indisponíveis ou descontinuados).
 
 ### 📍 Checkin 4: Interface & Entregáveis de Avaliação
-- [ ] Desenvolvimento da interface de chat (`Streamlit` ou script CLI interativo).
-- [ ] Elaboração das conversas de exemplo (`examples/*.md`) cobrindo cenários simples e complexos (ex.: verificação de estoque + política de parcelamento).
-- [ ] Redação do `README.md` detalhado com:
+- [x] Desenvolvimento da interface de chat (`Streamlit` ou script CLI interativo).
+- [x] Elaboração das conversas de exemplo (`examples/*.md`) cobrindo cenários simples e complexos (ex.: verificação de estoque + política de parcelamento).
+- [x] Redação do `README.md` detalhado com:
   - Instruções de instalação e execução.
   - Justificativa das escolhas técnicas (LLM, RAG, DuckDB, etc.).
   - Declaração transparente do uso de ferramentas de IA (Cursor/Copilot/Claude).
