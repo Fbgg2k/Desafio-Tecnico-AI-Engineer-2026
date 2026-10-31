@@ -90,3 +90,31 @@ def test_tools_expose_structured_arguments():
     }
 
     assert {name: set(tool.args) for name, tool in tools.items()} == expected_arguments
+
+
+def test_policy_tool_returns_text_for_chat_provider(monkeypatch):
+    monkeypatch.setattr(
+        workflow,
+        "retrieve_policy",
+        lambda _query, top_k=3: [
+            {"content": "Prazo para arrependimento: 7 dias.", "score": 0.9},
+            {"content": "O frete de devolução é custeado pela loja.", "score": 0.8},
+        ],
+    )
+    tools = {tool.name: tool for tool in workflow.build_tools()}
+
+    result = tools["retrieve_policy"].invoke({"query": "devolução"})
+
+    assert result == (
+        "Prazo para arrependimento: 7 dias.\n\n"
+        "O frete de devolução é custeado pela loja."
+    )
+
+
+def test_policy_tool_reports_when_no_policy_chunk_matches(monkeypatch):
+    monkeypatch.setattr(workflow, "retrieve_policy", lambda _query, top_k=3: [])
+    tools = {tool.name: tool for tool in workflow.build_tools()}
+
+    result = tools["retrieve_policy"].invoke({"query": "assunto sem resultado"})
+
+    assert result == "Nenhum trecho relevante foi encontrado no manual da loja."

@@ -13,6 +13,8 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.prebuilt import create_react_agent
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_groq import ChatGroq
+from langchain_ollama import ChatOllama
 
 from src.agent.prompts import SYSTEM_PROMPT
 from src.agent.tools.rag_tool import retrieve_policy
@@ -26,11 +28,16 @@ from src.agent.tools.sql_tool import (
 )
 
 DEFAULT_MODEL = "gemini-2.5-flash"
+DEFAULT_GROQ_MODEL = "openai/gpt-oss-20b"
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 CHECKPOINT_DB_PATH = PROJECT_ROOT / "conversations" / "checkpoints.sqlite"
 _CHECKPOINT_STACK = ExitStack()
 _CHECKPOINT_LOCK = threading.Lock()
 _PERSISTENT_CHECKPOINTER: SqliteSaver | None = None
+
+
+class LLMConfigurationError(ValueError):
+    """Erro claro de configuração do provedor de modelo."""
 
 
 def get_persistent_checkpointer() -> SqliteSaver:
@@ -49,10 +56,17 @@ def get_persistent_checkpointer() -> SqliteSaver:
 atexit.register(_CHECKPOINT_STACK.close)
 
 
+def _retrieve_policy_for_agent(query: str, top_k: int = 3) -> str:
+    results = retrieve_policy(query, top_k=top_k)
+    if not results:
+        return "Nenhum trecho relevante foi encontrado no manual da loja."
+    return "\n\n".join(result["content"] for result in results)
+
+
 def build_tools() -> List[BaseTool]:
     return [
         StructuredTool.from_function(
-            func=retrieve_policy,
+            func=_retrieve_policy_for_agent,
             name="retrieve_policy",
             description=(
                 "Busca no manual interno da Empório da Música (políticas de troca, garantia, "
@@ -96,18 +110,46 @@ def build_tools() -> List[BaseTool]:
     ]
 
 
-def _get_llm(model: str = DEFAULT_MODEL):
-    api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY") or os.getenv("OPENAI_API_KEY")
-    return ChatGoogleGenerativeAI(
-        model=model,
-        temperature=0.0,
-        google_api_key=api_key,
+def _get_llm(model: str | None = None):
+    provider = os.getenv("LLM_PROVIDER", "gemini").strip().lower()
+    if provider == "ollama":
+        return ChatOllama(
+            model=model or os.getenv("OLLAMA_MODEL", "llama3.1"),
+            base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
+            temperature=0.0,
+        )
+    if provider == "groq":
+        api_key = os.getenv("GROQ_API_KEY")
+        if not api_key:
+            raise LLMConfigurationError(
+                "Configure GROQ_API_KEY para usar Groq ou escolha outro LLM_PROVIDER."
+            )
+        return ChatGroq(
+            model=model or os.getenv("GROQ_MODEL", DEFAULT_GROQ_MODEL),
+            temperature=0.0,
+            max_tokens=512,
+            api_key=api_key,
+        )
+    if provider == "gemini":
+        api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            raise LLMConfigurationError(
+                "Configure GOOGLE_API_KEY para usar Gemini ou defina LLM_PROVIDER=ollama."
+            )
+        return ChatGoogleGenerativeAI(
+            model=model or os.getenv("GEMINI_MODEL", DEFAULT_MODEL),
+            temperature=0.0,
+            google_api_key=api_key,
+        )
+    raise LLMConfigurationError(
+        f"Provedor LLM_PROVIDER={provider!r} não suportado. "
+        "Use 'gemini', 'groq' ou 'ollama'."
     )
 
 
 def create_agent_executor(
     tools: Optional[List[BaseTool]] = None,
-    model: str = DEFAULT_MODEL,
+    model: str | None = None,
     checkpointer: BaseCheckpointSaver | None = None,
 ):
     """Cria o executor ReAct do agente."""
@@ -120,7 +162,9 @@ def create_agent_executor(
     return agent
 
 
-def create_agent_for_thread(thread_id: str, tools: Optional[List[BaseTool]] = None, model: str = DEFAULT_MODEL):
+def create_agent_for_thread(
+    thread_id: str, tools: Optional[List[BaseTool]] = None, model: str | None = None
+):
     """Cria o executor ReAct vinculado a uma thread (memória de conversa)."""
     agent = create_agent_executor(
         tools=tools,

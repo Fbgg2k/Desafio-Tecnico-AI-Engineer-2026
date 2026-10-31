@@ -7,7 +7,7 @@ Agente de atendimento em Python para a loja fictícia Empório da Música, em Ca
 | Componente | Escolha | Motivo |
 |---|---|---|
 | Orquestração | LangGraph ReAct | Permite ao modelo selecionar ferramentas conforme a solicitação. |
-| LLM | Gemini `gemini-2.5-flash` | Function calling para encaminhar perguntas às ferramentas do domínio. |
+| LLM | Gemini, Groq ou Ollama local | Function calling; Ollama funciona localmente sem chave de API. |
 | Dados operacionais | pandas sobre CSV | Acessa diretamente os arquivos fornecidos sem exigir um banco separado. |
 | Busca de políticas | FAISS + sentence-transformers | Recuperação vetorial local dos trechos do PDF. |
 | Memória | SQLite por `thread_id` | Checkpoints persistentes entre reinicializações e isolamento lógico de conversas. |
@@ -22,7 +22,9 @@ O fluxo ReAct decide quando consultar o catálogo, os pedidos ou o manual; o age
 ## Requisitos
 
 - Python 3.10 ou superior.
-- Uma chave de API do Google AI Studio para executar o agente com Gemini.
+- Para Gemini: uma chave de API do Google AI Studio.
+- Para Groq: uma chave de API do GroqCloud.
+- Para Ollama: Ollama instalado e um modelo compatível com chamadas de ferramentas baixado localmente.
 
 ## Instalação
 
@@ -35,7 +37,67 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-Edite `.env` e configure `GOOGLE_API_KEY` com sua chave do Google AI Studio. Não compartilhe nem versione esse arquivo.
+Edite `.env` e escolha o provedor:
+
+- **Gemini (padrão):** mantenha `LLM_PROVIDER=gemini` e configure `GOOGLE_API_KEY`.
+- **Groq:** configure `LLM_PROVIDER=groq`, `GROQ_API_KEY` e, opcionalmente, `GROQ_MODEL`. O modelo padrão é `openai/gpt-oss-20b`.
+- **Ollama (local):** configure `LLM_PROVIDER=ollama`, `OLLAMA_MODEL=llama3.1` e `OLLAMA_BASE_URL=http://localhost:11434`. Não precisa de API key externa.
+
+Crie uma chave no [console da Groq](https://console.groq.com/keys) e configure no `.env`:
+
+```dotenv
+LLM_PROVIDER=groq
+GROQ_API_KEY=sua-chave-do-groq
+GROQ_MODEL=openai/gpt-oss-20b
+```
+
+Não compartilhe nem versione `.env`. A camada gratuita da Groq tem limites que variam por modelo e conta; confira os [limites atuais](https://console.groq.com/docs/rate-limits). O agente continua executando as ferramentas localmente; somente as mensagens enviadas ao modelo são processadas pela Groq.
+
+Para Ollama no Linux, instale o aplicativo conforme a documentação oficial e baixe um modelo:
+
+```bash
+curl -fsSL https://ollama.com/install.sh | sh
+```
+
+No `.env`, ajuste a configuração para:
+
+```dotenv
+LLM_PROVIDER=ollama
+OLLAMA_MODEL=llama3.1
+OLLAMA_BASE_URL=http://localhost:11434
+```
+
+Depois da instalação, encerre e abra o terminal para atualizar o `PATH`. Confirme que o comando está disponível:
+
+```bash
+ollama -v
+```
+
+Baixe o modelo configurado:
+
+```bash
+ollama pull llama3.1
+```
+
+O instalador pode deixar o serviço ativo. Se não estiver, inicie-o em um terminal separado:
+
+```bash
+ollama serve
+```
+
+Confirme que o serviço responde:
+
+```bash
+curl http://localhost:11434/api/tags
+```
+
+Em outro terminal, execute a aplicação:
+
+```bash
+streamlit run src/app.py
+```
+
+O modelo precisa suportar chamadas de ferramentas; se necessário, escolha outro modelo compatível e atualize `OLLAMA_MODEL`. Se o serviço local estiver indisponível, a interface mostrará um aviso em vez do traceback de conexão.
 
 ## Executar
 
@@ -68,6 +130,16 @@ RUN_GEMINI_INTEGRATION_TESTS=1 pytest -q tests/integration/test_gemini_tool_rout
 ```
 
 Esse teste faz chamadas reais à API do Gemini e pode gerar cobrança. Sem a variável de ativação e a chave configurada, os casos de integração são ignorados.
+Para validar a seleção das ferramentas pela Groq, configure `GROQ_API_KEY` e execute:
+
+```bash
+RUN_GROQ_INTEGRATION_TESTS=1 pytest -q tests/integration/test_groq_tool_routing.py
+```
+
+Esse teste faz chamadas reais à API da Groq e consome a cota da conta. Sem a variável de ativação e a chave configurada, os casos são ignorados.
+
+Se o app exibir erro `429 RESOURCE_EXHAUSTED`, a cota da API do Gemini foi excedida. Confira os limites e o faturamento do projeto no Google AI Studio; o app mostrará um aviso curto e será possível tentar novamente quando a cota estiver disponível.
+Para executar sem depender da cota do Gemini, use o provedor Ollama local indicado acima; a inferência usa os recursos da sua máquina.
 
 ## Estrutura
 

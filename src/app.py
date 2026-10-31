@@ -1,5 +1,6 @@
 """Ponto de entrada da aplicação do agente (CLI ou interface Streamlit)."""
 
+import os
 import sys
 import uuid
 from pathlib import Path
@@ -9,16 +10,48 @@ if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
 from langchain_core.messages import AIMessage, HumanMessage
+import httpx
 
 from dotenv import load_dotenv
+from langchain_google_genai.chat_models import GoogleRateLimitError
+from groq import (
+    APIConnectionError as GroqAPIConnectionError,
+    AuthenticationError as GroqAuthenticationError,
+    RateLimitError as GroqRateLimitError,
+)
 
 from src.agent.guardrails import guardrail_response
 from src.agent.memory import _text_content, get_agent, save_conversation
+from src.agent.workflow import LLMConfigurationError
 
 load_dotenv()
 
 import streamlit as st
 from streamlit.runtime.scriptrunner import get_script_run_ctx
+
+_GEMINI_RATE_LIMIT_MESSAGE = (
+    "O Gemini atingiu o limite de uso da API. Confira a cota e o faturamento "
+    "do projeto no Google AI Studio; depois tente novamente quando houver cota disponível."
+)
+_GROQ_AUTHENTICATION_MESSAGE = (
+    "A chave da Groq não foi aceita. Confira GROQ_API_KEY no arquivo .env."
+)
+_GROQ_RATE_LIMIT_MESSAGE = (
+    "O limite de uso da Groq foi atingido. Confira os limites da sua conta e tente novamente."
+)
+_GROQ_CONNECTION_MESSAGE = (
+    "Não foi possível conectar à API da Groq. Verifique a internet e tente novamente."
+)
+
+
+def _ollama_connection_message() -> str | None:
+    if os.getenv("LLM_PROVIDER", "gemini").strip().lower() == "ollama":
+        base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+        return (
+            f"Não foi possível conectar ao Ollama em {base_url}. "
+            "Instale e inicie o Ollama, confirme que o modelo está baixado e tente novamente."
+        )
+    return None
 
 
 def _run_agent(thread_id: str, question: str):
@@ -61,8 +94,25 @@ def run_streamlit() -> None:
     prompt = st.chat_input("Como posso te ajudar hoje?")
     if prompt:
         st.session_state.messages.append({"role": "user", "content": prompt})
-        answer, _messages = _run_agent(thread_id, prompt)
-        st.session_state.messages.append({"role": "assistant", "content": answer})
+        try:
+            answer, _ = _run_agent(thread_id, prompt)
+        except LLMConfigurationError as error:
+            st.error(str(error))
+        except GoogleRateLimitError:
+            st.error(_GEMINI_RATE_LIMIT_MESSAGE)
+        except GroqAuthenticationError:
+            st.error(_GROQ_AUTHENTICATION_MESSAGE)
+        except GroqRateLimitError:
+            st.error(_GROQ_RATE_LIMIT_MESSAGE)
+        except GroqAPIConnectionError:
+            st.error(_GROQ_CONNECTION_MESSAGE)
+        except httpx.ConnectError:
+            message = _ollama_connection_message()
+            if message is None:
+                raise
+            st.error(message)
+        else:
+            st.session_state.messages.append({"role": "assistant", "content": answer})
 
 
 def main() -> None:
@@ -76,7 +126,29 @@ def main() -> None:
             break
         if not question.strip():
             continue
-        answer, _messages = _run_agent(thread_id, question)
+        try:
+            answer, _ = _run_agent(thread_id, question)
+        except LLMConfigurationError as error:
+            print(f"Atendente: {error}")
+            continue
+        except GoogleRateLimitError:
+            print(f"Atendente: {_GEMINI_RATE_LIMIT_MESSAGE}")
+            continue
+        except GroqAuthenticationError:
+            print(f"Atendente: {_GROQ_AUTHENTICATION_MESSAGE}")
+            continue
+        except GroqRateLimitError:
+            print(f"Atendente: {_GROQ_RATE_LIMIT_MESSAGE}")
+            continue
+        except GroqAPIConnectionError:
+            print(f"Atendente: {_GROQ_CONNECTION_MESSAGE}")
+            continue
+        except httpx.ConnectError:
+            message = _ollama_connection_message()
+            if message is None:
+                raise
+            print(f"Atendente: {message}")
+            continue
         print(f"Atendente: {answer}")
 
 

@@ -27,7 +27,8 @@ pytestmark = pytest.mark.skipif(
         ("Qual é a situação atual do pedido de número 1?", "get_order_status"),
     ],
 )
-def test_gemini_selects_expected_tool(question, expected_tool):
+def test_gemini_selects_expected_tool(monkeypatch, question, expected_tool):
+    monkeypatch.setenv("LLM_PROVIDER", "gemini")
     agent = create_agent_executor()
     result = agent.invoke(
         {"messages": [("user", question)]},
