@@ -46,11 +46,12 @@ Desafio-Tecnico-AI-Engineer-2026/
 │   │   ├── ingestion.py      # Leitura de PDF + Markdown
 │   │   └── rag_store.py      # Chunking + embeddings + FAISS
 │   └── app.py                # Ponto de entrada (CLI chat)
+├── conversations/            # Memória de conversas (logs .md por thread)
 ├── tests/                    # Testes de ingestão, tools e RAG
 ├── examples/                 # Conversas de exemplo (Entregável 3)
 ├── README.md
 ├── requirements.txt
-└── .env.example              # OPENAI_API_KEY
+└── .env.example              # GOOGLE_API_KEY
 ```
 
 ## 🚀 Instalação e Execução (Linux)
@@ -138,7 +139,7 @@ Arquitetura híbrida (**ReAct + Router/Tools**):
 2. **Function Calling / Text-to-SQL** — consultas analíticas/operacionais sobre os CSVs (`src/agent/tools/sql_tool.py`);
 3. **Guardrails** — recusa amigável para fora de escopo e *prompt injection*.
 
-Fluxo do agente: a pergunta chega → o executor ReAct (LangGraph) decide entre RAG e tools → monta resposta com os fatos recuperados.
+Fluxo do agente: a pergunta chega → o executor ReAct (LangGraph) decide entre RAG e tools → monta resposta com os fatos recuperados → **memória por thread (MemorySaver)** mantém o contexto e persiste logs em `conversations/*.md`.
 
 ## 🛠️ Stack Tecnológica
 
@@ -167,11 +168,12 @@ Desafio-Tecnico-AI-Engineer-2026/
 │   │   ├── ingestion.py         # Leitura de PDF + Markdown
 │   │   └── rag_store.py         # Chunking + embeddings + FAISS
 │   └── app.py                   # Ponto de entrada (CLI chat)
+├── conversations/              # Memória de conversas (logs .md por thread)
 ├── tests/                       # Testes de ingestão, tools e RAG
 ├── examples/                    # Conversas de exemplo (Entregável 3)
 ├── README.md
 ├── requirements.txt
-└── .env.example                 # OPENAI_API_KEY
+└── .env.example                 # GOOGLE_API_KEY
 ```
 
 ## 🚀 Instalação e Execução (Linux)
