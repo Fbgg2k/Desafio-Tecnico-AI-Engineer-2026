@@ -1,0 +1,12 @@
+pypdf==6.21.4
+markdown==3.11.2
+pandas==3.1.0
+duckdb==2.0.0
+openai==1.55.3
+chromadb==0.5.5
+langgraph==0.2.50
+langchain==0.3.8
+langchain-openai==0.3.5
+faiss-cpu==1.7.4
+streamlit==1.38.0
+python-dotenv==1.0.1
