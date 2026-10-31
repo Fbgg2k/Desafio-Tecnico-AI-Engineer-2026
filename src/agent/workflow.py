@@ -1,5 +1,6 @@
 """Workflow do agente de atendimento (arquitetura híbrida ReAct + Tools)."""
 
+import os
 from typing import List
 
 from langchain_core.tools import BaseTool, Tool
@@ -66,7 +67,7 @@ def build_tools() -> List[BaseTool]:
 def create_agent_executor(tools: List[BaseTool] | None = None, model: str = DEFAULT_MODEL):
     """Cria o executor ReAct do agente."""
     agent = create_react_agent(
-        model=ChatOpenAI(model=model, temperature=0.0, api_key="OPENAI_API_KEY"),
+        model=ChatOpenAI(model=model, temperature=0.0, api_key=os.getenv("OPENAI_API_KEY")),
         tools=tools or build_tools(),
         prompt=SYSTEM_PROMPT,
     )

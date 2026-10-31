@@ -1,6 +1,12 @@
 """Ponto de entrada da aplicação do agente (interface CLI estilo chat)."""
 
+import os
+
+from dotenv import load_dotenv
+
 from src.agent.workflow import create_agent_executor
+
+load_dotenv()
 
 
 def run_agent(question: str) -> str:

@@ -11,6 +11,7 @@ __pycache__/
 # Credenciais
 .env
 .env.*
+!.env.example
 
 # IDE
 .vscode/
@@ -18,3 +19,6 @@ __pycache__/
 
 # Logs
 *.log
+
+# Testes
+.pytest_cache/
