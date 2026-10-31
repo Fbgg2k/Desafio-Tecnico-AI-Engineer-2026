@@ -1,11 +1,11 @@
 """Workflow do agente de atendimento (arquitetura híbrida ReAct + Tools)."""
 
 import os
-from typing import List
+from typing import List, Optional
 
 from langchain_core.tools import BaseTool, Tool
 from langgraph.prebuilt import create_react_agent
-from langchain_openai import ChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 from src.agent.prompts import SYSTEM_PROMPT
 from src.agent.tools.rag_tool import retrieve_policy
@@ -18,7 +18,7 @@ from src.agent.tools.sql_tool import (
     search_products,
 )
 
-DEFAULT_MODEL = "gpt-4o-mini"
+DEFAULT_MODEL = "gemini-2.5-flash"
 
 
 def build_tools() -> List[BaseTool]:
@@ -64,10 +64,19 @@ def build_tools() -> List[BaseTool]:
     ]
 
 
-def create_agent_executor(tools: List[BaseTool] | None = None, model: str = DEFAULT_MODEL):
+def _get_llm(model: str = DEFAULT_MODEL):
+    api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY") or os.getenv("OPENAI_API_KEY")
+    return ChatGoogleGenerativeAI(
+        model=model,
+        temperature=0.0,
+        google_api_key=api_key,
+    )
+
+
+def create_agent_executor(tools: Optional[List[BaseTool]] = None, model: str = DEFAULT_MODEL):
     """Cria o executor ReAct do agente."""
     agent = create_react_agent(
-        model=ChatOpenAI(model=model, temperature=0.0, api_key=os.getenv("OPENAI_API_KEY")),
+        model=_get_llm(model),
         tools=tools or build_tools(),
         prompt=SYSTEM_PROMPT,
     )

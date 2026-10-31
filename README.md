@@ -146,7 +146,7 @@ Fluxo do agente: a pergunta chega → o executor ReAct (LangGraph) decide entre 
 | :--- | :--- | :--- |
 | **Linguagem** | Python 3.10+ | Requisito obrigatório do desafio |
 | **Framework de Agentes** | LangGraph / LangChain | Orquestração ReAct, estado e tools |
-| **LLM** | OpenAI (`gpt-4o-mini`) | Equilíbrio entre custo, velocidade e precisão |
+| **LLM** | Gemini (`gemini-2.5-flash`) via Google AI Studio | Equilíbrio entre custo, velocidade e precisão para *Function Calling* |
 | **Busca SQL/CSV** | pandas | Consultas analíticas sobre CSVs |
 | **Vetorização & RAG** | FAISS + sentence-transformers | Busca local, fácil execução |
 | **Interface** | CLI (Streamlit no roadmap) | Chat rápido para testes |
@@ -184,7 +184,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 
-cp .env.example .env   # colar a OPENAI_API_KEY
+cp .env.example .env   # colar a GOOGLE_API_KEY (Google AI Studio / Gemini)
 python -m pytest tests/ -v
 python src/app.py
 ```
