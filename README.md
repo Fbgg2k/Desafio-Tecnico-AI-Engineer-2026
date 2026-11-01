@@ -54,29 +54,36 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-Edite `.env` e escolha **um** provedor. Configure a chave correspondente; nunca compartilhe nem versione esse arquivo.
+O arquivo `.env.example` é um modelo de configuração, não contém chaves válidas. Copie-o para `.env`, abra a cópia no editor e escolha **um** provedor. Cada usuário deve gerar e inserir sua própria API key; não reutilize chaves de outra pessoa.
 
-- **Gemini:** configure `LLM_PROVIDER=gemini` e `GOOGLE_API_KEY` (ou `GEMINI_API_KEY`).
-- **Groq:** configure `LLM_PROVIDER=groq`, `GROQ_API_KEY` e, opcionalmente, `GROQ_MODEL`. O modelo padrão é `openai/gpt-oss-20b`.
+Para editar pelo terminal:
 
-Exemplos de configuração. Use apenas o bloco do provedor selecionado:
+```bash
+nano .env
+```
+
+Configure somente a variável de chave do provedor escolhido:
 
 Gemini:
 
 ```dotenv
 LLM_PROVIDER=gemini
-GOOGLE_API_KEY=sua-chave-do-google
+GOOGLE_API_KEY=sua-chave-pessoal-do-google
 ```
+
+Crie a chave no [Google AI Studio](https://aistudio.google.com/apikey). O código também aceita `GEMINI_API_KEY` como alternativa a `GOOGLE_API_KEY`.
 
 Groq:
 
 ```dotenv
 LLM_PROVIDER=groq
-GROQ_API_KEY=sua-chave-do-groq
+GROQ_API_KEY=sua-chave-pessoal-do-groq
 GROQ_MODEL=openai/gpt-oss-20b
 ```
 
-Para Groq, crie uma chave no [console](https://console.groq.com/keys). Para Gemini, crie uma chave no [Google AI Studio](https://aistudio.google.com/apikey). Não compartilhe nem versione `.env`; o arquivo já é ignorado pelo Git. As APIs hospedadas recebem as mensagens enviadas ao modelo. As ferramentas de catálogo, pedidos e RAG são executadas pelo projeto localmente.
+Crie a chave no [console da Groq](https://console.groq.com/keys). O modelo é opcional e, se omitido, a aplicação usa `openai/gpt-oss-20b`.
+
+Salve o arquivo e execute a aplicação no mesmo ambiente. Se ela já estiver rodando, pare com `Ctrl+C` e inicie novamente para carregar as alterações. Nunca compartilhe nem versione `.env`; ele é ignorado pelo Git. Não coloque suas chaves no código, no README ou em commits. As APIs hospedadas recebem as mensagens enviadas ao modelo; as ferramentas de catálogo, pedidos e RAG são executadas localmente pelo projeto.
 
 A camada gratuita da Groq tem limites que variam por modelo e conta; confira os [limites atuais](https://console.groq.com/docs/rate-limits). A lista de modelos acessíveis pode variar entre contas.
 
