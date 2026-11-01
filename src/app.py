@@ -15,6 +15,7 @@ import httpx
 from dotenv import load_dotenv
 from langchain_google_genai.chat_models import GoogleRateLimitError
 from groq import (
+    APIStatusError as GroqAPIStatusError,
     APIConnectionError as GroqAPIConnectionError,
     AuthenticationError as GroqAuthenticationError,
     RateLimitError as GroqRateLimitError,
@@ -42,6 +43,14 @@ _GROQ_RATE_LIMIT_MESSAGE = (
 _GROQ_CONNECTION_MESSAGE = (
     "Não foi possível conectar à API da Groq. Verifique a internet e tente novamente."
 )
+_EMPTY_RESPONSE_MESSAGE = (
+    "O modelo concluiu a solicitação sem gerar uma resposta. "
+    "Tente novamente ou reformule a pergunta."
+)
+
+
+class AgentResponseError(RuntimeError):
+    """O agente terminou sem uma resposta textual para apresentar."""
 
 
 def _ollama_connection_message() -> str | None:
@@ -51,6 +60,36 @@ def _ollama_connection_message() -> str | None:
             f"Não foi possível conectar ao Ollama em {base_url}. "
             "Instale e inicie o Ollama, confirme que o modelo está baixado e tente novamente."
         )
+    return None
+
+
+def _provider_error_message(error: Exception) -> str | None:
+    if isinstance(error, AgentResponseError):
+        return str(error)
+    if isinstance(error, LLMConfigurationError):
+        return str(error)
+    if isinstance(error, GoogleRateLimitError):
+        return _GEMINI_RATE_LIMIT_MESSAGE
+    if isinstance(error, GroqAuthenticationError):
+        return _GROQ_AUTHENTICATION_MESSAGE
+    if isinstance(error, GroqRateLimitError):
+        return _GROQ_RATE_LIMIT_MESSAGE
+    if isinstance(error, GroqAPIConnectionError):
+        return _GROQ_CONNECTION_MESSAGE
+    if isinstance(error, GroqAPIStatusError):
+        if error.status_code in (413, 429):
+            return _GROQ_RATE_LIMIT_MESSAGE
+        if error.status_code == 404:
+            return (
+                "O modelo configurado não está disponível na Groq. "
+                "Confira GROQ_MODEL e os modelos habilitados para sua conta."
+            )
+        return (
+            f"A API da Groq retornou HTTP {error.status_code}. "
+            "Confira a configuração do provedor e tente novamente."
+        )
+    if isinstance(error, httpx.ConnectError):
+        return _ollama_connection_message()
     return None
 
 
@@ -70,6 +109,8 @@ def _run_agent(thread_id: str, question: str):
         messages = result.get("messages") or []
         last = messages[-1] if messages else None
         answer = _text_content(getattr(last, "content", "") or "")
+        if not answer.strip():
+            raise AgentResponseError(_EMPTY_RESPONSE_MESSAGE)
     save_conversation(thread_id, messages)
     return answer, messages
 
@@ -89,30 +130,45 @@ def run_streamlit() -> None:
 
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]):
-            st.markdown(msg["content"])
+            if msg.get("error"):
+                st.error(msg["content"])
+            else:
+                st.markdown(msg["content"])
 
-    prompt = st.chat_input("Como posso te ajudar hoje?")
+    prompt = st.chat_input(
+        "Como posso te ajudar hoje?",
+        submit_mode="disable",
+    )
     if prompt:
         st.session_state.messages.append({"role": "user", "content": prompt})
-        try:
-            answer, _ = _run_agent(thread_id, prompt)
-        except LLMConfigurationError as error:
-            st.error(str(error))
-        except GoogleRateLimitError:
-            st.error(_GEMINI_RATE_LIMIT_MESSAGE)
-        except GroqAuthenticationError:
-            st.error(_GROQ_AUTHENTICATION_MESSAGE)
-        except GroqRateLimitError:
-            st.error(_GROQ_RATE_LIMIT_MESSAGE)
-        except GroqAPIConnectionError:
-            st.error(_GROQ_CONNECTION_MESSAGE)
-        except httpx.ConnectError:
-            message = _ollama_connection_message()
-            if message is None:
-                raise
-            st.error(message)
-        else:
-            st.session_state.messages.append({"role": "assistant", "content": answer})
+        with st.chat_message("user"):
+            st.markdown(prompt)
+        with st.chat_message("assistant"):
+            try:
+                with st.spinner("Consultando o atendente...", show_time=True):
+                    answer, _ = _run_agent(thread_id, prompt)
+            except (
+                AgentResponseError,
+                LLMConfigurationError,
+                GoogleRateLimitError,
+                GroqAuthenticationError,
+                GroqRateLimitError,
+                GroqAPIConnectionError,
+                GroqAPIStatusError,
+                httpx.ConnectError,
+            ) as error:
+                message = _provider_error_message(error)
+                if message is None:
+                    raise
+                st.error(message)
+                st.session_state.messages.append(
+                    {"role": "assistant", "content": message, "error": True}
+                )
+            else:
+                st.markdown(answer)
+                st.session_state.messages.append(
+                    {"role": "assistant", "content": answer}
+                )
 
 
 def main() -> None:
@@ -128,23 +184,17 @@ def main() -> None:
             continue
         try:
             answer, _ = _run_agent(thread_id, question)
-        except LLMConfigurationError as error:
-            print(f"Atendente: {error}")
-            continue
-        except GoogleRateLimitError:
-            print(f"Atendente: {_GEMINI_RATE_LIMIT_MESSAGE}")
-            continue
-        except GroqAuthenticationError:
-            print(f"Atendente: {_GROQ_AUTHENTICATION_MESSAGE}")
-            continue
-        except GroqRateLimitError:
-            print(f"Atendente: {_GROQ_RATE_LIMIT_MESSAGE}")
-            continue
-        except GroqAPIConnectionError:
-            print(f"Atendente: {_GROQ_CONNECTION_MESSAGE}")
-            continue
-        except httpx.ConnectError:
-            message = _ollama_connection_message()
+        except (
+            AgentResponseError,
+            LLMConfigurationError,
+            GoogleRateLimitError,
+            GroqAuthenticationError,
+            GroqRateLimitError,
+            GroqAPIConnectionError,
+            GroqAPIStatusError,
+            httpx.ConnectError,
+        ) as error:
+            message = _provider_error_message(error)
             if message is None:
                 raise
             print(f"Atendente: {message}")
