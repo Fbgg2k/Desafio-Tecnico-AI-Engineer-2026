@@ -35,7 +35,7 @@ O system prompt está em `src/agent/prompts.py`. Ele orienta o agente a usar fer
 - O catálogo, os pedidos, as políticas e os dados de atendimento representam um cenário de demonstração. Antes de uso real, é necessário validar e manter esses dados, reforçar avaliação de respostas e definir controles de privacidade, acesso e retenção.
 - A primeira execução do RAG pode baixar o modelo de embeddings do Hugging Face; depois, a vetorização é feita localmente.
 
-Com mais tempo, eu adicionaria avaliações automatizadas de groundedness e seleção de ferramentas por provedor, testes de regressão para alucinações, limites e observabilidade por chamada, streaming de respostas e dados verificados da loja. Também avaliaria autenticação e autorização apropriadas antes de consultar dados reais de pedidos.
+Com mais tempo, disponibilizaria o agente por meio de uma API e de integrações com diferentes canais de atendimento, como WhatsApp, Messenger e uma interface web. Também permitiria consultas por imagem: o cliente poderia enviar uma foto de um instrumento para buscar itens semelhantes no catálogo. Essa funcionalidade exigiria um modelo com capacidade de visão, limites para tamanho e formato das imagens e respostas que indiquem quando não houver confiança suficiente na identificação. Além disso, adicionaria avaliações automatizadas de fundamentação das respostas (groundedness), testes de regressão para alucinações, seleção de ferramentas por provedor, limites e observabilidade por chamada, streaming de respostas e dados verificados da loja. Antes de consultar dados reais de pedidos, também definiria controles adequados de autenticação e autorização.
 
 ## Requisitos
 
